@@ -63,6 +63,40 @@ describe('administrator account controls', () => {
     expect(revoked.status).toBe(401)
   })
 
+
+  it('admin can delete a regular user but not the administrator', async () => {
+    const adminCookie = await login()
+    const inviteResponse = await exports.default.fetch(
+      `${TEST_ORIGIN}/api/admin/invites`,
+      jsonRequest({ username: 'bob' }, withCookie(adminCookie)),
+    )
+    expect(inviteResponse.status).toBe(201)
+    const invite = (await inviteResponse.json() as { invite: { link: string } }).invite
+    const token = new URL(invite.link).pathname.split('/').at(-1)!
+    await exports.default.fetch(`${TEST_ORIGIN}/api/invites/${token}`, jsonRequest({ password: 'bob correct password' }))
+
+    const users = await exports.default.fetch(`${TEST_ORIGIN}/api/admin/users`, withCookie(adminCookie))
+    const bob = (await users.json() as { users: Array<{ id: string; username: string }> }).users.find(({ username }) => username === 'bob')!
+
+    const deleted = await exports.default.fetch(
+      `${TEST_ORIGIN}/api/admin/users/${bob.id}`,
+      { ...withCookie(adminCookie), method: 'DELETE' },
+    )
+    expect(deleted.status).toBe(204)
+
+    const after = await exports.default.fetch(`${TEST_ORIGIN}/api/admin/users`, withCookie(adminCookie))
+    const names = (await after.json() as { users: Array<{ username: string }> }).users.map(({ username }) => username)
+    expect(names).not.toContain('bob')
+
+    const admin = await exports.default.fetch(`${TEST_ORIGIN}/api/account`, withCookie(adminCookie))
+    const adminUser = (await admin.json() as { user: { id: string } }).user
+    const forbidden = await exports.default.fetch(
+      `${TEST_ORIGIN}/api/admin/users/${adminUser.id}`,
+      { ...withCookie(adminCookie), method: 'DELETE' },
+    )
+    expect(forbidden.status).toBe(409)
+  })
+
   it('rejects an expired invitation', async () => {
     const token = 'A'.repeat(43)
     await env.DATA.put(`invite:${await hashToken(token)}`, JSON.stringify({

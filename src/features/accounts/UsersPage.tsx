@@ -24,6 +24,7 @@ export function UsersPage() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [resetUser, setResetUser] = useState<UserSummary | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<UserSummary | null>(null)
   const [resetError, setResetError] = useState('')
   const [mutating, setMutating] = useState(false)
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set())
@@ -152,6 +153,23 @@ export function UsersPage() {
     }
   }
 
+  const deleteUser = async () => {
+    if (!deleteTarget || mutating) return
+    const target = deleteTarget
+    setDeleteTarget(null)
+    setError('')
+    setMutating(true)
+    try {
+      await api(`/api/admin/users/${target.id}`, { method: 'DELETE' })
+      setMessage(`用户 ${target.username} 及其订阅已删除。`)
+      setSelectedUsers((current) => new Set([...current].filter((id) => id !== target.id)))
+      await load()
+    } catch (cause) {
+      setError(cause instanceof ApiClientError ? cause.message : '删除用户失败')
+    } finally {
+      setMutating(false)
+    }
+  }
   const executeBatch = async (target: BatchTarget, action: BatchActionKind | 'enable') => {
     const ids = [...(target === 'users' ? selectedUsers : selectedInvites)]
     if (!ids.length || mutating) return
@@ -232,7 +250,12 @@ export function UsersPage() {
                           <KeyRound aria-hidden="true" size={16} />
                         </button>
                       ) : null}
-                      <input
+                      {user.role === 'user' ? (
+                        <button className="icon-button danger" type="button" disabled={mutating} aria-label={`删除 ${user.username}`} title="删除用户" onClick={() => setDeleteTarget(user)}>
+                          <Trash2 aria-hidden="true" size={16} />
+                        </button>
+                      ) : null}
+                        <input
                         type="checkbox"
                         checked={user.enabled}
                         disabled={user.role === 'admin' || mutating}
@@ -305,6 +328,17 @@ export function UsersPage() {
         busy={mutating}
         onClose={() => setBatchConfirm(null)}
         onConfirm={() => executeBatch(batchConfirm?.target ?? 'invites', batchConfirm?.action ?? 'revoke')}
+      />
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="删除用户"
+        description={`将永久删除用户 ${deleteTarget?.username}，并同时删除其全部订阅（不可恢复）。确定？`}
+        confirmLabel="确认删除"
+        danger
+        busy={mutating}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={deleteUser}
       />
     </div>
   )

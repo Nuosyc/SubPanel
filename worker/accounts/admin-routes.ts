@@ -6,6 +6,7 @@ import { hashToken, randomToken } from '../platform/crypto.js'
 import { readJson } from '../platform/http.js'
 import { hashPassword } from './password.js'
 import { readAccounts, writeAccounts } from './repository.js'
+import { readDelivery, writeDelivery, deleteCompiledArtifacts } from '../delivery/repository.js'
 import {
   inviteRecordSchema,
   passwordInputSchema,
@@ -60,6 +61,29 @@ adminAccountRoutes.patch('/users/:id', async (c) => {
   const users = accounts.users.with(index, user)
   await writeAccounts(c.env.DATA, { ...accounts, users }, now)
   return c.json({ user: toPublicUser(user) })
+})
+
+
+adminAccountRoutes.delete('/users/:id', async (c) => {
+  const accounts = await readAccounts(c.env.DATA)
+  const index = accounts.users.findIndex(({ id }) => id === c.req.param('id'))
+  if (index < 0) throw apiError(404, 'USER_NOT_FOUND', '用户不存在')
+  if (accounts.users[index].role === 'admin') throw apiError(409, 'ADMIN_IMMUTABLE', '不能删除管理员')
+  const userId = accounts.users[index].id
+
+  const now = new Date().toISOString()
+  await writeAccounts(c.env.DATA, { ...accounts, users: accounts.users.filter((user) => user.id !== userId) }, now)
+
+  // 级联删除该用户拥有的全部订阅，并清除对应已编译产物
+  const delivery = await readDelivery(c.env.DATA)
+  const removed = delivery.subscriptions.filter((subscription) => subscription.userId === userId)
+  if (removed.length > 0) {
+    const subscriptions = delivery.subscriptions.filter((subscription) => subscription.userId !== userId)
+    await writeDelivery(c.env.DATA, { ...delivery, subscriptions }, now)
+    await Promise.allSettled(removed.map(({ tokenHash }) => deleteCompiledArtifacts(c.env.DATA, tokenHash)))
+  }
+
+  return c.body(null, 204)
 })
 
 adminAccountRoutes.post('/users/:id/password', async (c) => {
