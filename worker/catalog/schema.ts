@@ -63,7 +63,7 @@ export const sourceWarningSchema = z.object({
   line: z.number().int().positive().optional(),
 })
 
-export const MAX_NODES = 100
+export const MAX_NODES = 150
 
 const jsonRecordSchema = z.record(z.string(), jsonValueSchema)
 const uniqueStringArray = <T extends z.ZodType<string>>(item: T) => z.array(item).refine(
