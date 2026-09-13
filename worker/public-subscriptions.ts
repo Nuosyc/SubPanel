@@ -9,7 +9,7 @@ import { compileSubscription } from './delivery/compiler.js'
 import { compiledKey, readDelivery } from './delivery/repository.js'
 
 const tokenPattern = /^[A-Za-z0-9_-]{43}$/u
-const clients = new Set(['mihomo', 'singbox', 'surge', 'loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'])
+const clients = new Set(['mihomo', 'singbox', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'])
 const clientAliases: Record<string, string> = {
   clash: 'mihomo',
   'clash-meta': 'mihomo',
@@ -25,8 +25,6 @@ function clientFromUserAgent(userAgent: string): string {
   const value = userAgent.toLowerCase()
   if (value.includes('mihomo') || value.includes('clash') || value.includes('stash')) return 'mihomo'
   if (value.includes('sing-box') || value.includes('singbox') || value.includes('karing')) return 'singbox'
-  if (value.includes('surge')) return 'surge'
-  if (value.includes('loon')) return 'loon'
   if (value.includes('quantumult')) return 'quantumultx'
   if (value.includes('v2rayn') || value.includes('v2rayng')) return 'v2rayn'
   if (value.includes('nekobox')) return 'nekobox'

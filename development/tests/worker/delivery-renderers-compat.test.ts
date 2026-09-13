@@ -275,19 +275,6 @@ describe('delivery renderer compatibility matrix', () => {
     expect(parsed.transport).toMatchObject({ type: 'ws', earlyData: '2048', earlyDataHeaderName: 'Sec-WebSocket-Protocol' })
   })
 
-  it('keeps supported Surge nodes and reports only fields it cannot express', () => {
-    const result = renderClient('surge', [node({ protocol: 'trojan', credentials: { password: 'secret' }, tls: { ...node().tls, insecure: true }, extensions: { vendor: true } })])
-    expect(result.body).toContain('skip-cert-verify=true')
-    expect(result.outputNodes).toBe(1)
-    expect(result.diagnostics).toHaveLength(1)
-    expect(result.diagnostics[0]).toMatchObject({
-      nodeId: 'node_1',
-      nodeName: 'Reality',
-      code: 'UNSUPPORTED_FIELD',
-      outcome: 'included',
-    })
-  })
-
   it('round-trips NaiveProxy credentials in its native URI scheme', () => {
     const raw = serializeShareUri(node({
       protocol: 'naive',

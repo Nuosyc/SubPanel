@@ -17,8 +17,6 @@ const CLIENT_LABELS: Record<string, string> = {
   stash: 'Stash',
   singbox: 'sing-box',
   karing: 'Karing',
-  surge: 'Surge',
-  loon: 'Loon',
   quantumultx: 'Quantumult X',
   v2rayn: 'v2rayN',
   nekobox: 'NekoBox',

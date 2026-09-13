@@ -4,8 +4,6 @@ import type { ClientId } from '../delivery/schema.js'
 export const CLIENT_IDS = [
   'mihomo',
   'singbox',
-  'surge',
-  'loon',
   'quantumultx',
   'v2rayn',
   'nekobox',

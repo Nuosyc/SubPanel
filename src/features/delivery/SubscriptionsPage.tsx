@@ -24,7 +24,7 @@ type SubscriptionForm = {
 type DrawerState = 'create' | { kind: 'edit' | 'details'; subscription: AdminSubscription }
 type ConfirmAction = 'disable' | 'delete'
 
-const CLIENTS = ['mihomo', 'singbox', 'surge', 'loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'] as const
+const CLIENTS = ['mihomo', 'singbox', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'] as const
 const CLIENT_LABELS: Record<string, string> = {
   auto: '自动识别',
   mihomo: 'Mihomo',
@@ -33,8 +33,6 @@ const CLIENT_LABELS: Record<string, string> = {
   stash: 'Stash',
   singbox: 'sing-box',
   karing: 'Karing',
-  surge: 'Surge',
-  loon: 'Loon',
   quantumultx: 'Quantumult X',
   v2rayn: 'v2rayN',
   nekobox: 'NekoBox',

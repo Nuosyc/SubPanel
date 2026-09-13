@@ -8,8 +8,6 @@ export const tokenHashSchema = z.string().regex(/^[A-Za-z0-9_-]{43}$/)
 export const clientIdSchema = z.enum([
   'mihomo',
   'singbox',
-  'surge',
-  'loon',
   'quantumultx',
   'v2rayn',
   'nekobox',

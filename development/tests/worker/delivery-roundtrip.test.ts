@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import { parseMihomo } from '../../../worker/import/mihomo.js'
 import { parseUriList } from '../../../worker/import/uri.js'
 import { parseSingBox } from '../../../worker/import/singbox.js'
-import { parseSurge } from '../../../worker/import/surge.js'
 import { renderClient, type RenderNode } from '../../../worker/renderers/index.js'
 
 const base = (overrides: Partial<RenderNode> = {}): RenderNode => ({
@@ -34,52 +33,6 @@ const singBoxStructuralWarnings = [
 ]
 
 describe('structured delivery round trips', () => {
-  it('renders a Surge document accepted by the Surge importer', () => {
-    const parsed = parseSurge(renderClient('surge', [base({
-      credentials: { password: 'pass,word' },
-      tls: { enabled: true, serverName: 'example.com', insecure: false, alpn: ['h2', 'http/1.1'] },
-    })]).body)
-    expect(parsed.warnings).toEqual([])
-    expect(parsed.nodes).toHaveLength(1)
-    expect(parsed.nodes[0].credentials).toEqual({ password: 'pass,word' })
-    expect(parsed.nodes[0].tls).toMatchObject({ insecure: false, alpn: ['h2', 'http/1.1'] })
-  })
-
-  it('uses Surge positional credentials for HTTPS and SOCKS5-TLS', () => {
-    for (const protocol of ['https', 'socks5'] as const) {
-      const result = renderClient('surge', [base({
-        protocol,
-        displayName: protocol,
-        credentials: { username: 'user', password: 'pass,word' },
-        tls: { enabled: true, insecure: false },
-      })])
-      expect(result.body).toContain(`${protocol} = ${protocol === 'socks5' ? 'socks5-tls' : 'https'}, example.com, 443, user, "pass,word"`)
-      const parsed = parseSurge(result.body)
-      expect(parsed.warnings).toEqual([])
-      expect(parsed.nodes[0]).toMatchObject({ protocol, credentials: { username: 'user', password: 'pass,word' }, tls: { enabled: true, insecure: false } })
-    }
-  })
-
-  it('round-trips Surge VMess WebSocket headers', () => {
-    const parsed = parseSurge(renderClient('surge', [base({
-      protocol: 'vmess',
-      credentials: { uuid: '22222222-2222-4222-8222-222222222222' },
-      transport: { type: 'ws', path: '/edge', headers: { Host: 'cdn.example.com', 'X-Test': 'value' } },
-    })]).body)
-    expect(parsed.warnings).toEqual([])
-    expect(parsed.nodes[0].transport).toMatchObject({ type: 'ws', path: '/edge', headers: { Host: 'cdn.example.com', 'X-Test': 'value' } })
-  })
-
-  it('round-trips Surge Shadowsocks obfs URI fields', () => {
-    const parsed = parseSurge(renderClient('surge', [base({
-      protocol: 'shadowsocks',
-      credentials: { method: 'aes-128-gcm', password: 'password' },
-      plugin: { name: 'http', options: { host: 'cdn.example.com', uri: '/edge' } },
-    })]).body)
-    expect(parsed.warnings).toEqual([])
-    expect(parsed.nodes[0].plugin).toMatchObject({ name: 'http', options: { host: 'cdn.example.com', uri: '/edge' } })
-  })
-
   it('renders Mihomo YAML accepted by the Mihomo importer', () => {
     const parsed = parseMihomo(renderClient('mihomo', [base()]).body)
     expect(parsed.warnings).toEqual([])

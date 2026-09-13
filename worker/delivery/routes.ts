@@ -20,7 +20,7 @@ import {
 import { compiledKey } from './repository.js'
 import { compiledArtifactSchema } from './schema.js'
 
-const client = z.enum(['mihomo', 'singbox', 'surge', 'loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'])
+const client = z.enum(['mihomo', 'singbox', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'])
 const createSchema = z.object({
   userId: z.string().regex(/^usr_[1-9]\d*$/),
   name: z.string().trim().min(1).max(128),
@@ -86,11 +86,11 @@ async function view(c: Context<AppEnv>, subscription: Awaited<ReturnType<typeof 
   const currentCatalogRevision = catalogRevision ?? (await readCatalog(c.env.DATA)).revision
   const origin = new URL(c.req.url).origin
   const links = Object.fromEntries(
-    ['auto', 'mihomo', 'clash', 'clash-meta', 'stash', 'singbox', 'karing', 'surge', 'loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket']
+    ['auto', 'mihomo', 'clash', 'clash-meta', 'stash', 'singbox', 'karing', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket']
       .map((name) => [name, `${origin}/sub/${token}${name === 'auto' ? '' : `/${name}`}`]),
   )
   const diagnostics: Record<string, unknown> = {}
-  for (const name of ['mihomo', 'singbox', 'surge', 'loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic']) {
+  for (const name of ['mihomo', 'singbox', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic']) {
     const raw = await c.env.DATA.get(compiledKey(subscription.tokenHash, name))
     if (!raw) continue
     let value: unknown

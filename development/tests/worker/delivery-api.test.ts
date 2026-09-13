@@ -64,7 +64,7 @@ describe('Delivery APIs and public subscriptions', () => {
     expect(body.subscription.links.karing).toContain(`/sub/${body.token}/karing`)
     expect(JSON.stringify(body)).not.toContain('encryptedToken')
     expect(body.subscription.diagnostics.mihomo).toMatchObject({ outputNodes: 1, skippedNodes: 0, available: true })
-    expect((await env.DATA.list({ prefix: 'compiled:' })).keys.length).toBeGreaterThanOrEqual(9)
+    expect((await env.DATA.list({ prefix: 'compiled:' })).keys.length).toBeGreaterThanOrEqual(7)
     expect((await exports.default.fetch(`${TEST_ORIGIN}/api/admin/delivery`, withCookie(admin))).status).toBe(200)
     expect((await exports.default.fetch(`${TEST_ORIGIN}/api/admin/delivery/subscriptions`, withCookie(admin))).status).toBe(200)
 
@@ -76,7 +76,7 @@ describe('Delivery APIs and public subscriptions', () => {
     const downloadNames = {
       mihomo: '主要订阅.yaml', clash: '主要订阅.yaml', 'clash-meta': '主要订阅.yaml', stash: '主要订阅.yaml',
       singbox: '主要订阅.json', karing: '主要订阅.json', 'sing-box': '主要订阅.json',
-      surge: '主要订阅.conf', loon: '主要订阅.conf', quantumultx: '主要订阅.conf', 'quantumult-x': '主要订阅.conf',
+      quantumultx: '主要订阅.conf', 'quantumult-x': '主要订阅.conf',
       v2rayn: '主要订阅.txt', v2rayng: '主要订阅.txt', nekobox: '主要订阅.txt', 'neko-box': '主要订阅.txt',
       shadowrocket: '主要订阅.txt', generic: '主要订阅.txt',
     }

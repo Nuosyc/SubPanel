@@ -15,7 +15,7 @@
     "enabled": true
   },
   "triggers": {
-    "crons": ["*/15 * * * *"]
+    "crons": ["0 * * * *"]
   },
   "upload_source_maps": true
 }

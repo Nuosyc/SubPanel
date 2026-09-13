@@ -1,6 +1,5 @@
 import { parse as parseYaml } from 'yaml'
 import { describe, expect, it } from 'vitest'
-import { parseLoon } from '../../../worker/import/loon.js'
 import { parseShareUri } from '../../../worker/import/uri.js'
 import {
   CLIENT_IDS,
@@ -28,9 +27,9 @@ const base = (overrides: Partial<RenderNode> = {}): RenderNode => ({
 })
 
 describe('delivery renderers', () => {
-  it('exposes the eight stable clients and generic fallback', () => {
+  it('exposes the six stable clients and generic fallback', () => {
     expect(CLIENT_IDS).toEqual([
-      'mihomo', 'singbox', 'surge', 'loon', 'quantumultx',
+      'mihomo', 'singbox', 'quantumultx',
       'v2rayn', 'nekobox', 'shadowrocket', 'generic',
     ])
   })
@@ -57,13 +56,8 @@ describe('delivery renderers', () => {
 
   it('uses standard URI rows for text and Base64 clients', () => {
     const node = base({ protocol: 'trojan', displayName: 'Trojan', server: 'trojan.example.com', port: 443, credentials: { password: 'secret' }, tls: { enabled: true, serverName: 'trojan.example.com' } })
-    for (const client of ['loon', 'quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'] as const) {
+    for (const client of ['quantumultx', 'v2rayn', 'nekobox', 'shadowrocket', 'generic'] as const) {
       const result = renderClient(client, [node])
-      if (client === 'loon') {
-        expect(result.body).toContain('Trojan = trojan,trojan.example.com,443')
-        expect(parseLoon(result.body)).toMatchObject({ warnings: [], nodes: [{ protocol: 'trojan', displayName: 'Trojan' }] })
-        continue
-      }
       const text = ['v2rayn', 'nekobox', 'shadowrocket', 'generic'].includes(client)
         ? atob(result.body)
         : result.body
@@ -100,8 +94,8 @@ describe('delivery renderers', () => {
 
   it('reports stable skip reasons for a client that cannot express a node', () => {
     const node = base({ protocol: 'wireguard', displayName: 'WG', credentials: { privateKey: 'private', publicKey: 'public' } })
-    const result = renderClient('surge', [node])
-    expect(result.body).toContain('[Proxy]')
+    const result = renderClient('singbox', [node])
+    expect(result.body).toContain('selector')
     expect(result.outputNodes).toBe(0)
     expect(result.diagnostics).toHaveLength(1)
     expect(result.diagnostics[0]).toMatchObject({
@@ -111,24 +105,6 @@ describe('delivery renderers', () => {
       code: 'UNSUPPORTED_PROTOCOL',
       outcome: 'skipped',
     })
-  })
-
-  it('renders the official Surge protocol set and skips VLESS', () => {
-    const nodes: RenderNode[] = [
-      base({ id: 'node_snell', protocol: 'snell', displayName: 'Snell', credentials: { psk: 'psk', version: '4' }, plugin: { name: 'http', options: { host: 'snell.example.com' } }, extensions: { reuse: true } }),
-      base({ id: 'node_tuic', protocol: 'tuic', displayName: 'TUIC', credentials: { token: 'token' }, tls: { enabled: true, alpn: ['h3'] } }),
-      base({ id: 'node_hy2', protocol: 'hysteria2', displayName: 'Hysteria 2', credentials: { password: 'password' }, transport: { mport: '2000-3000', hopInterval: '30', obfsPassword: 'obfs' }, tls: { enabled: true } }),
-      base({ id: 'node_anytls', protocol: 'anytls', displayName: 'AnyTLS', credentials: { password: 'password' }, tls: { enabled: true } }),
-      base({ id: 'node_vless', protocol: 'vless', displayName: 'VLESS', credentials: { uuid: '22222222-2222-4222-8222-222222222222' } }),
-    ]
-    const result = renderClient('surge', nodes)
-    expect(result.body).toContain('Snell = snell,')
-    expect(result.body).toContain('TUIC = tuic,')
-    expect(result.body).toContain('Hysteria 2 = hysteria2,')
-    expect(result.body).toContain('AnyTLS = anytls,')
-    expect(result.outputNodes).toBe(4)
-    expect(result.diagnostics).toHaveLength(1)
-    expect(result.diagnostics[0]).toMatchObject({ nodeId: 'node_vless', protocol: 'vless', code: 'UNSUPPORTED_PROTOCOL', outcome: 'skipped' })
   })
 
   it('reports unsupported normalized extensions instead of dropping them', () => {
@@ -174,14 +150,6 @@ describe('delivery renderers', () => {
       outcome: 'included',
       fields: expect.arrayContaining(['tls.unsupportedTls', 'transport.headers.X-Unsupported', 'transport.unsupportedTransport', 'plugin']),
     })
-  })
-
-  it('reports client-specific plugin options that line renderers drop', () => {
-    for (const client of ['surge', 'loon'] as const) {
-      const result = renderClient(client, [base({ plugin: { name: 'http', options: { host: 'cdn.example.com', unsupported: true } } })])
-      expect(result.outputNodes).toBe(1)
-      expect(result.diagnostics[0]).toMatchObject({ fields: expect.arrayContaining(['plugin.options.unsupported']) })
-    }
   })
 
   it('does not warn for Mihomo WireGuard extensions that are actually rendered', () => {
