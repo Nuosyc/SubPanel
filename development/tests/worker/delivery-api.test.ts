@@ -70,7 +70,7 @@ describe('Delivery APIs and public subscriptions', () => {
 
     const response = await exports.default.fetch(`${TEST_ORIGIN}/sub/${body.token}/mihomo`)
     expect(response.status).toBe(200)
-    expect(response.headers.get('cache-control')).toBe('no-store')
+    expect(response.headers.get('cache-control')).toBe('public, max-age=1800')
     expect(response.headers.get('content-type')).toContain('yaml')
     expect(response.headers.get('profile-title')).toBe(encodeURIComponent('主要订阅'))
     const downloadNames = {

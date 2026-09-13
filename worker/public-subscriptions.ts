@@ -41,13 +41,36 @@ async function serve(c: Context<AppEnv>, clientParam?: string) {
   const client = clientAliases[requestedClient.toLowerCase()] ?? requestedClient.toLowerCase()
   if (!clients.has(client)) throw apiError(404, 'SUBSCRIPTION_CLIENT_NOT_FOUND', '订阅格式不存在')
   const tokenHash = await hashToken(token)
+
+  // 每次都读取权威状态（delivery）以校验 enabled/revision，保证停用、删除、重置 token 即时生效
+  let subscription
+  try {
+    const delivery = await readDelivery(c.env.DATA)
+    subscription = delivery.subscriptions.find((candidate) => candidate.tokenHash === tokenHash)
+  } catch {
+    throw apiError(404, 'SUBSCRIPTION_NOT_FOUND', '订阅不存在')
+  }
+  if (!subscription?.enabled) throw apiError(404, 'SUBSCRIPTION_NOT_FOUND', '订阅不存在')
+
+  // 缓存键包含所属客户端与订阅版本，内容（版本）变化即换新键
+  const cacheUrl = new URL(c.req.url)
+  cacheUrl.search = `__s=${subscription.revision}&__c=${client}`
+  const cacheKey = new Request(cacheUrl)
+  const cached = await caches.default.match(cacheKey)
+  if (cached) {
+    const cachedEtag = cached.headers.get('etag')
+    const ifNoneMatch = c.req.header('If-None-Match')
+    if (cachedEtag && ifNoneMatch?.split(',').map((value: string) => value.trim()).includes(cachedEtag)) {
+      return new Response(null, { status: 304, headers: { ETag: cachedEtag } })
+    }
+    return cached
+  }
+
   let raw: string | null
-  let delivery: Awaited<ReturnType<typeof readDelivery>>
   let catalog: Awaited<ReturnType<typeof readCatalog>>
   try {
-    [raw, delivery, catalog] = await Promise.all([
+    [raw, catalog] = await Promise.all([
       c.env.DATA.get(compiledKey(tokenHash, client)),
-      readDelivery(c.env.DATA),
       readCatalog(c.env.DATA),
     ])
   } catch {
@@ -60,8 +83,6 @@ async function serve(c: Context<AppEnv>, clientParam?: string) {
   } catch {
     throw apiError(404, 'SUBSCRIPTION_NOT_FOUND', '订阅不存在')
   }
-  const subscription = delivery.subscriptions.find((candidate) => candidate.tokenHash === tokenHash)
-  if (!subscription?.enabled) throw apiError(404, 'SUBSCRIPTION_NOT_FOUND', '订阅不存在')
   const parsed = compiledArtifactSchema.safeParse(value)
   let artifact
   if (parsed.success) artifact = parsed.data
@@ -77,7 +98,6 @@ async function serve(c: Context<AppEnv>, clientParam?: string) {
     throw apiError(404, 'SUBSCRIPTION_NOT_FOUND', '订阅不存在')
   }
   if (!artifact.available) throw apiError(422, 'SUBSCRIPTION_NO_NODES', '该订阅没有可用节点')
-  c.header('Cache-Control', 'no-store')
   c.header('ETag', artifact.etag)
   c.header('Last-Modified', new Date(artifact.lastModified).toUTCString())
   c.header('Content-Type', artifact.contentType)
@@ -86,7 +106,10 @@ async function serve(c: Context<AppEnv>, clientParam?: string) {
   c.header('profile-title', encodeURIComponent(subscription.name))
   const ifNoneMatch = c.req.header('If-None-Match')
   if (ifNoneMatch?.split(',').map((value: string) => value.trim()).includes(artifact.etag)) return c.body(null, 304)
-  return c.body(artifact.body)
+  const response = c.body(artifact.body)
+  response.headers.set('Cache-Control', 'public, max-age=1800')
+  await caches.default.put(cacheKey, response.clone())
+  return response
 }
 
 export const publicSubscriptionRoutes = new Hono<AppEnv>()
